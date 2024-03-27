@@ -26,8 +26,8 @@ createMatrixes = True
 #atlas = "harvard_oxford"
 #atlas = "aal"
 #atlas = "msdl"
-atlas = "schaefer"
 #atlas = "seitzman"
+atlas = "destrieux"
 
 kindlist = ["covariance", "correlation", "partial correlation", "tangent", "precision"]
 kind = "correlation"

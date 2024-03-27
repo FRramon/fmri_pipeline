@@ -32,6 +32,8 @@ def load_dataset(atlas):
 		dataset = datasets.fetch_atlas_msdl()
 	elif atlas == "schaefer":
 		dataset = datasets.fetch_atlas_schaefer_2018(n_rois=400, yeo_networks=7,resolution_mm = 2)
+	elif atlas == "destrieux":
+		dataset = datasets.fetch_atlas_destrieux_2009()
 	return dataset
 
 def get_time_series(source_dir,group,sub,ses,atlas):
@@ -40,7 +42,7 @@ def get_time_series(source_dir,group,sub,ses,atlas):
 	funcim = f"{sub}_{ses}_task-rest_space-MNI152NLin2009cAsym_desc-preproc_bold.nii.gz"
 
 	## Default strategy is motion + high pass + wm_csf
-	confounds = fmriprep.load_confounds(os.path.join(data_path,funcim))
+	confounds = fmriprep.load_confounds(os.path.join(data_path,funcim),ica_aroma = 'basic')
 
 	dataset = load_dataset(atlas)
 	atlas_filename = dataset["maps"]
@@ -56,7 +58,7 @@ def get_time_series(source_dir,group,sub,ses,atlas):
 	    	verbose=5,
 		)
 
-	elif atlas == "schaefer":
+	elif atlas == "schaefer" or atlas == "destrieux":
 		masker = NiftiLabelsMasker(
     	labels_img=atlas_filename,
     	standardize="zscore_sample",

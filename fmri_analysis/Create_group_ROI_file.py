@@ -42,12 +42,17 @@ labels_msdl = ['L Aud', 'R Aud', 'Striate', 'L DMN', 'Med DMN', 'Front DMN', 'R 
 labels_index_msdl = range(1,len(labels_msdl)+1)
 
 
-atlas_schaefer = datasets.fetch_coords_schaefer_2018()
+atlas_schaefer = datasets.fetch_atlas_schaefer_2018()
 #atlas = datasets.fetch_atlas_destrieux_2009()
 atlas_filename = atlas_schaefer["maps"]
 labels_schaefer = atlas_schaefer["labels"]
 clean_labels_schaefer = [str(x)[2:-1] for x in labels_schaefer]
 labels_index_schaefer = range(1,len(labels_schaefer)+1)
+
+atlas_destrieux = datasets.fetch_atlas_destrieux_2009()
+labels_destrieux = [x[1] for x in atlas_destrieux.labels]
+labels_index_destrieux = range(1,len(labels_destrieux)+1)
+
 
 
 
@@ -71,6 +76,12 @@ df_labelconvert_schaefer = pd.DataFrame(
      'labelname': clean_labels_schaefer
     })
 
+df_labelconvert_destrieux = pd.DataFrame(
+    {'index': labels_index_destrieux,
+     'labelname': labels_destrieux
+    })
+
+
 # df_labelconvert_seitzman = pd.DataFrame(
 #     {'index': labels_index_seitzman,
 #      'labelname': clean_labels_seitzman
@@ -84,8 +95,7 @@ df_labelconvert_schaefer = pd.DataFrame(
 base_dir = "/Volumes/LaCie/derivatives"
 group = "Patients"
 ses_list = ["001","002","003"]
-atlas = "schaefer"
-#atlas = "seitzman"
+atlas = "destrieux"
 
 
 if atlas == "harvard_oxford":
@@ -98,6 +108,8 @@ elif atlas == "schaefer":
 	df_labelconvert = df_labelconvert_schaefer
 elif atlas == "seitzman":
 	df_labelconvert = df_labelconvert_seitzman
+elif atlas == "destrieux":
+	df_labelconvert = df_labelconvert_destrieux
 
 all_non_zero_entries = []
 result_dir = os.path.join(base_dir,group)
@@ -128,6 +140,8 @@ for ses in ses_list:
 			input_file = os.path.join(connectome_dir, f'sub-{sub}_ses-{ses}_msdl_correlation_mat.csv')
 		elif atlas == "schaefer":
 			input_file = os.path.join(connectome_dir, f'sub-{sub}_ses-{ses}_schaefer_correlation_mat.csv')
+		elif atlas == "destrieux":
+			input_file = os.path.join(connectome_dir, f'sub-{sub}_ses-{ses}_destrieux_correlation_mat.csv')
 
 
 		df = pd.read_csv(input_file)
