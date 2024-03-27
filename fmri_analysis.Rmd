@@ -1,0 +1,82 @@
+---
+title: "**Statistiques fMRI**"
+author: "* François Ramon*"
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 2
+geometry: margin = 1.5in
+font-size: 13pt
+date: "2024-02-14"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+\newpage
+
+
+
+
+```{r initialize data, include = FALSE}
+library(NetworkConhect)
+library(igraph)
+library(gplots)
+library(ggpubr)
+library(lme4)
+library(broom.mixed)
+path <- "/Volumes/LaCie/derivatives/grouped_results"
+
+
+weight <- "FBC"
+real_weight <- "PearsonCorrel"
+threshold <- 0.1
+```
+
+
+```{r statistical analysis, echo=FALSE,message=F,results='asis',warning=FALSE}
+atlas <- c("aal","harvard_oxford","msdl")
+metrics <- c("betweenness","strength","smallworldeness")#c("global_eff","local_eff","characteristic_path","clust_coeff") 
+for (atl in atlas){
+  data_path = paste(path,"/FC_",atl,".csv",sep="")
+  DF <- read.csv(data_path)
+  colnames(DF) <- c('subject_id','visit_id','from_i','to_j','weight',"from","to")
+  DF <- DF[c("subject_id","visit_id","from","to","weight")]
+  
+
+  DF$subject_id <- as.character(DF$subject_id)
+  DF$visit_id <- as.character(DF$visit_id)
+
+  DF$visit_id[DF$visit_id == "1"] <- "V1"
+  DF$visit_id[DF$visit_id == "2"] <- "V2"
+  DF$visit_id[DF$visit_id == "3"] <- "V3"
+  
+  for (m in metrics){
+    cat("## Analyzing ", m ,"in atlas ",atl, "\n")
+    cat("\n")
+
+    G <- NetworkConhect::getData(DF, weight,m,"density",threshold)
+
+    g <- ggviolin(G, x = "Group", y = "Y", fill = "Group",
+                  palette = "npg",#color_palette,
+                  alpha = .6,
+                  width = .5,
+                  linetype = 'blank',
+                  add= "jitter",color = "Group")
+    print(g)
+    
+    res.glmer <- lme4::glmer(Y ~ Group + (1|ids),data = G,family = Gamma(link = "log"))
+    #res.lmer <- lme4::lmer(Y ~ Group + (1|ids),data = G)
+    print(knitr::kable(tidy(res.glmer,"fixed"),caption = paste("Analyzing ",m, " ~ Group + (1|id) : Atlas",atl)))
+    #print(tidy(res.lmer,"fixed"),caption = paste("Analyzing ",m, " ~ Group + (1|id)"))
+
+  }
+}
+
+  
+
+
+
+```
+

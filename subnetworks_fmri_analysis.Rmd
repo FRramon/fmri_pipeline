@@ -1,0 +1,97 @@
+---
+title: "Yeo's Subnetwork rs-fMRI analysis"
+author: "*François Ramon*"
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 2
+geometry: margin = 1.5in
+font-size: 13pt
+date: "2024-02-14"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+\newpage
+
+
+```{r initialize data, include = FALSE,cache=TRUE}
+library(NetworkConhect)
+library(igraph)
+library(gplots)
+library(ggpubr)
+library(lme4)
+library(broom.mixed)
+path <- "/Volumes/LaCie/derivatives/grouped_results"
+source("/Users/francoisramon/Desktop/These/fMRI_pipeline/extract_yeo_schaefer.R")
+weight <- "PearsonCorrel"
+threshold <- 0
+
+atlas <- "schaefer"
+metrics <- c("global_eff","local_eff","characteristic_path","clust_coeff") 
+LrsNet <- c("Default","SomMot","SalVentAttn","Vis","Limbic","Cont","DorsAttn")
+
+data_path = paste(path,"/FC_schaefer.csv",sep="")
+DF <- read.csv(data_path)
+colnames(DF) <- c('subject_id','visit_id','from_i','to_j','weight',"from","to")
+DF <- DF[c("subject_id","visit_id","from","to","weight")]
+  
+DF$subject_id <- as.character(DF$subject_id)
+DF$visit_id <- as.character(DF$visit_id)
+
+DF$visit_id[DF$visit_id == "1"] <- "V1"
+DF$visit_id[DF$visit_id == "2"] <- "V2"
+DF$visit_id[DF$visit_id == "3"] <- "V3"
+
+```
+
+
+```{r statistical analysis, echo=FALSE,message=F,results='asis',warning=FALSE,include = T}
+library(NetworkConhect)
+library(igraph)
+library(gplots)
+library(ggpubr)
+library(lme4)
+library(broom.mixed)
+path <- "/Volumes/LaCie/derivatives/grouped_results"
+source("/Users/francoisramon/Desktop/These/fMRI_pipeline/extract_yeo_schaefer.R")
+weight <- "PearsonCorrel"
+threshold <- 0
+
+atlas <- "schaefer"
+metrics <- c("global_eff")#,"local_eff","characteristic_path","clust_coeff") 
+LrsNet <- c("Default")#,"SomMot","SalVentAttn","Vis","Limbic","Cont","DorsAttn")
+
+for (net in LrsNet){
+  cat("## Analyzing Yeo's subnetworks : ", net,"\n")
+  for (m in metrics){
+    cat("### Analyzing ", m ,"\n")
+    cat("\n")
+    G <- getResultsInSubNetworks(DF,weight,m,"threshold",0,net)
+
+
+    # G <- NetworkConhect::getData(DF, weight,m,"density",threshold)
+    #
+    g <- ggviolin(G, x = "Group", y = "Y", fill = "Group",
+                  palette = "npg",#color_palette,
+                  alpha = .6,
+                  width = .5,
+                  linetype = 'blank',
+                  add= "jitter",color = "Group")
+    print(g)
+    #
+    res.lmer <- lme4::lmer(Y ~ Group + (1|ids),data = G)#,family = Gamma(link = "log"))
+    #res.lmer <- lme4::lmer(Y ~ Group + (1|ids),data = G)
+    print(knitr::kable(tab_))
+    print(knitr::kable(tidy(res.lmer,"fixed"),caption = paste("Analyzing ",m, " ~ Group + (1|id) : Network",net)))
+    #print(tidy(res.lmer,"fixed"),caption = paste("Analyzing ",m, " ~ Group + (1|id)"))
+  }
+}
+
+  
+
+
+
+```
