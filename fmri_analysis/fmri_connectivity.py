@@ -68,7 +68,6 @@ def get_time_series(source_dir,group,sub,ses,atlas):
 	)
 
 	time_series = masker.fit_transform(os.path.join(data_path,funcim),confounds[0])
-
 	return time_series,dataset
 
 
@@ -77,6 +76,8 @@ def compute_correlation_matrix(source_dir,group,sub,ses,atlas,kind):
 	time_series,dataset = get_time_series(source_dir,group,sub,ses,atlas)
 	labels = dataset["labels"]
 
+	if atlas == "destrieux":
+		labels = [l for l in labels if l[1] != "Background" and l[1] != "L Medial_wall" and l[1] != "R Medial_wall"]
 
 
 	correlation_measure = ConnectivityMeasure(
@@ -85,6 +86,7 @@ def compute_correlation_matrix(source_dir,group,sub,ses,atlas,kind):
 	)
 	correlation_matrix = correlation_measure.fit_transform([time_series])[0]
 	np.fill_diagonal(correlation_matrix, 0)
+	print(correlation_matrix.shape[0])
 
 	# if atlas == "harvard_oxford":
 	# 	np.fill_diagonal(correlation_matrix, 0)
@@ -111,6 +113,6 @@ def compute_correlation_matrix(source_dir,group,sub,ses,atlas,kind):
 # print(labels)
 
 
-
+#compute_correlation_matrix("/Volumes/LaCie/derivatives","Patients","sub-01","ses-001","destrieux","correlation")
 
 

@@ -34,6 +34,7 @@ from nilearn import datasets
 labels_aal = ['Precentral_L', 'Precentral_R', 'Frontal_Sup_L', 'Frontal_Sup_R', 'Frontal_Sup_Orb_L', 'Frontal_Sup_Orb_R', 'Frontal_Mid_L', 'Frontal_Mid_R', 'Frontal_Mid_Orb_L', 'Frontal_Mid_Orb_R', 'Frontal_Inf_Oper_L', 'Frontal_Inf_Oper_R', 'Frontal_Inf_Tri_L', 'Frontal_Inf_Tri_R', 'Frontal_Inf_Orb_L', 'Frontal_Inf_Orb_R', 'Rolandic_Oper_L', 'Rolandic_Oper_R', 'Supp_Motor_Area_L', 'Supp_Motor_Area_R', 'Olfactory_L', 'Olfactory_R', 'Frontal_Sup_Medial_L', 'Frontal_Sup_Medial_R', 'Frontal_Med_Orb_L', 'Frontal_Med_Orb_R', 'Rectus_L', 'Rectus_R', 'Insula_L', 'Insula_R', 'Cingulum_Ant_L', 'Cingulum_Ant_R', 'Cingulum_Mid_L', 'Cingulum_Mid_R', 'Cingulum_Post_L', 'Cingulum_Post_R', 'Hippocampus_L', 'Hippocampus_R', 'ParaHippocampal_L', 'ParaHippocampal_R', 'Amygdala_L', 'Amygdala_R', 'Calcarine_L', 'Calcarine_R', 'Cuneus_L', 'Cuneus_R', 'Lingual_L', 'Lingual_R', 'Occipital_Sup_L', 'Occipital_Sup_R', 'Occipital_Mid_L', 'Occipital_Mid_R', 'Occipital_Inf_L', 'Occipital_Inf_R', 'Fusiform_L', 'Fusiform_R', 'Postcentral_L', 'Postcentral_R', 'Parietal_Sup_L', 'Parietal_Sup_R', 'Parietal_Inf_L', 'Parietal_Inf_R', 'SupraMarginal_L', 'SupraMarginal_R', 'Angular_L', 'Angular_R', 'Precuneus_L', 'Precuneus_R', 'Paracentral_Lobule_L', 'Paracentral_Lobule_R', 'Caudate_L', 'Caudate_R', 'Putamen_L', 'Putamen_R', 'Pallidum_L', 'Pallidum_R', 'Thalamus_L', 'Thalamus_R', 'Heschl_L', 'Heschl_R', 'Temporal_Sup_L', 'Temporal_Sup_R', 'Temporal_Pole_Sup_L', 'Temporal_Pole_Sup_R', 'Temporal_Mid_L', 'Temporal_Mid_R', 'Temporal_Pole_Mid_L', 'Temporal_Pole_Mid_R', 'Temporal_Inf_L', 'Temporal_Inf_R', 'Cerebelum_Crus1_L', 'Cerebelum_Crus1_R', 'Cerebelum_Crus2_L', 'Cerebelum_Crus2_R', 'Cerebelum_3_L', 'Cerebelum_3_R', 'Cerebelum_4_5_L', 'Cerebelum_4_5_R', 'Cerebelum_6_L', 'Cerebelum_6_R', 'Cerebelum_7b_L', 'Cerebelum_7b_R', 'Cerebelum_8_L', 'Cerebelum_8_R', 'Cerebelum_9_L', 'Cerebelum_9_R', 'Cerebelum_10_L', 'Cerebelum_10_R', 'Vermis_1_2', 'Vermis_3', 'Vermis_4_5', 'Vermis_6', 'Vermis_7', 'Vermis_8', 'Vermis_9', 'Vermis_10']
 labels_index_aal = range(1,len(labels_aal)+1)
 
+print(len(labels_index_aal))
 labels_ho = ['Frontal Pole', 'Insular Cortex', 'Superior Frontal Gyrus', 'Middle Frontal Gyrus', 'Inferior Frontal Gyrus, pars triangularis', 'Inferior Frontal Gyrus, pars opercularis', 'Precentral Gyrus', 'Temporal Pole', 'Superior Temporal Gyrus, anterior division', 'Superior Temporal Gyrus, posterior division', 'Middle Temporal Gyrus, anterior division', 'Middle Temporal Gyrus, posterior division', 'Middle Temporal Gyrus, temporooccipital part', 'Inferior Temporal Gyrus, anterior division', 'Inferior Temporal Gyrus, posterior division', 'Inferior Temporal Gyrus, temporooccipital part', 'Postcentral Gyrus', 'Superior Parietal Lobule', 'Supramarginal Gyrus, anterior division', 'Supramarginal Gyrus, posterior division', 'Angular Gyrus', 'Lateral Occipital Cortex, superior division', 'Lateral Occipital Cortex, inferior division', 'Intracalcarine Cortex', 'Frontal Medial Cortex', 'Juxtapositional Lobule Cortex (formerly Supplementary Motor Cortex)', 'Subcallosal Cortex', 'Paracingulate Gyrus', 'Cingulate Gyrus, anterior division', 'Cingulate Gyrus, posterior division', 'Precuneous Cortex', 'Cuneal Cortex', 'Frontal Orbital Cortex', 'Parahippocampal Gyrus, anterior division', 'Parahippocampal Gyrus, posterior division', 'Lingual Gyrus', 'Temporal Fusiform Cortex, anterior division', 'Temporal Fusiform Cortex, posterior division', 'Temporal Occipital Fusiform Cortex', 'Occipital Fusiform Gyrus', 'Frontal Opercular Cortex', 'Central Opercular Cortex', 'Parietal Opercular Cortex', 'Planum Polare', "Heschl's Gyrus (includes H1 and H2)", 'Planum Temporale', 'Supracalcarine Cortex', 'Occipital Pole']
 labels_index_ho = range(1,len(labels_ho)+1)
 
@@ -50,9 +51,16 @@ clean_labels_schaefer = [str(x)[2:-1] for x in labels_schaefer]
 labels_index_schaefer = range(1,len(labels_schaefer)+1)
 
 atlas_destrieux = datasets.fetch_atlas_destrieux_2009()
-labels_destrieux = [x[1] for x in atlas_destrieux.labels]
-labels_index_destrieux = range(1,len(labels_destrieux)+1)
 
+labels_destrieux = [x[1] for x in atlas_destrieux.labels if x[1]!= "Background" and x[1] != "R Medial_wall" and x[1] != "L Medial_wall"] 
+#labels_index_destrieux = [x[0] for x in atlas_destrieux.labels if x[1]!= "Background" and x[1] != "R Medial_wall" and x[1] != "L Medial_wall"] 
+# print(labels_index_destrieux)
+# print(len(labels_index_destrieux))
+# print(labels_destrieux)
+
+labels_index_destrieux = range(0,len(labels_destrieux))
+
+# print(len(labels_index_destrieux))
 
 
 
@@ -80,6 +88,8 @@ df_labelconvert_destrieux = pd.DataFrame(
     {'index': labels_index_destrieux,
      'labelname': labels_destrieux
     })
+
+df_labelconvert_destrieux.to_csv("/Users/francoisramon/Desktop/labelconvert_destrieux_test.csv")
 
 
 # df_labelconvert_seitzman = pd.DataFrame(
@@ -123,7 +133,6 @@ for ses in ses_list:
 	for sub in subject_list:
 
 		connectome_dir = os.path.join(base_dir,group,f'sub-{sub}',f'ses-{ses}',"functional_connectivity")
-		print(connectome_dir)
 		if not os.path.exists(connectome_dir):
 			sys.exit(
 				f'Error File not Found: Pipeline has not created connectome matrix for {sub} on {ses}')
@@ -144,20 +153,34 @@ for ses in ses_list:
 			input_file = os.path.join(connectome_dir, f'sub-{sub}_ses-{ses}_destrieux_correlation_mat.csv')
 
 
-		df = pd.read_csv(input_file)
+		#df = pd.read_csv(input_file)
+		df = np.loadtxt(input_file,delimiter = ',')
 			# Create a list to store the non-zero entries for each subject and session
 		non_zero_entries = []
-		for i in range(df.shape[0]):
-			for j in range(i+1, df.shape[1]):
-				if df.iloc[i, j] != 0 and i != 0 and j != 0:
-					non_zero_entries.append({'subject': sub, 'session': ses, 'i': i, 'j': j, 'PearsonCorr': df.iloc[i, j]})
+		rows,cols = df.shape
+		print(rows)
+		for i in range(rows):
+			for j in range(cols):
+				if df[i, j] != 0 :
+					non_zero_entries.append({'subject': sub, 'session': ses, 'i': i, 'j': j, 'PearsonCorr': df[i, j]})
+		
+
+
+		#non_zero_entries = [entry for entry in non_zero_entries if entry['i'] > entry['j']]
+
+
+
 
 		# Extend the list of all_non_zero_entries with the current subject and session entri
 			
 		current_df = pd.DataFrame(non_zero_entries)
+		#duplicate_rows = current_df[current_df['i'] > current_df['j']]
+		#current_df = current_df.drop(duplicate_rows.index)
 		print(current_df.head())
+		print(current_df['i'].unique())
+		print(current_df['j'].unique())
 
- 			
+ 		
 		df_withlabels = pd.merge(current_df, df_labelconvert[['index', 'labelname']], left_on='i', right_on='index', how='left')
 		df_withlabels.rename(columns={'labelname': 'ROI1'}, inplace=True)
 		df_withlabels.drop(columns='index', inplace=True)
