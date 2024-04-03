@@ -115,17 +115,20 @@ coupling <- merge(coupling,equivalence_names, by = "subject_id")
 #heatmap.2(spearman_matrix,trace="none",dendrogram = "none",key=T,col = viridis(100))
 
 clinique <- read_excel("/Volumes/LaCie/Sync/Graph_project/results/Clinique_pourfrancois.xlsx")
-clinique <- clinique[,c('subject_id',"MADRS_V1","HDRS_21_V1")]
-colnames(clinique) <- c("conhect_label","MADRS_V1","HDRS_21_V1")
+clinique <- clinique[,c('subject_id',"MADRS_V1","HDRS_21_V1","remission","reponse")]
+colnames(clinique) <- c("conhect_label","MADRS_V1","HDRS_21_V1","remission","reponse")
 coupling_clinical <- merge(coupling,clinique,by = "conhect_label")
 
 
-plot(coupling_clinical$MADRS_V1,coupling_clinical$SFC)
-res.lm <- lm(SFC ~ HDRS_21_V1, data = coupling_clinical)
 
-ggplot(coupling_clinical, aes(x = MADRS_V1, y = SFC)) + 
-  geom_point() +
-  stat_smooth(method = "lm", col = "blue")
+library(ggpubr)
+coupling_clinical <- drop_na(coupling_clinical)
+ggboxplot(coupling_clinical, x = "reponse", y = "SFC", add = "jitter")
+res.lm <- lm(SFC ~ reponse, data = coupling_clinical)
+Anova(res.lm)
+# ggplot(coupling_clinical, aes(x = remission, y = SFC)) + 
+#   geom_point() +
+ # stat_smooth(method = "lm", col = "blue")
 
 
 
