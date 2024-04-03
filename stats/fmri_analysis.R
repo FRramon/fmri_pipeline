@@ -11,7 +11,7 @@ library(gplots)
 library(ggpubr)
 library(lme4)
 library(broom.mixed)
-
+library(gridExtra)
 ######### 
 
 ### Utils functions  ####
@@ -26,7 +26,8 @@ readLUT <- function(lut_path){
 #### Load functional dataset
 
 path <- "/Volumes/LaCie/derivatives/grouped_results"
-data_path = "/Volumes/LaCie/derivatives/grouped_results/FC_destrieux.csv"
+data_path = "/Volumes/LaCie/derivatives/grouped_results/FC_aal.csv"
+output_dir = "/Users/francoisramon/Desktop/These/fMRI_pipeline/results"
 DF <- read.csv(data_path)
 colnames(DF) <- c('subject_id','visit_id','from_i','to_j','weight',"from","to")
 DF <- DF[c("subject_id","visit_id","from","to","weight")]
@@ -38,71 +39,183 @@ DF$visit_id[DF$visit_id == "1"] <- "V1"
 DF$visit_id[DF$visit_id == "2"] <- "V2"
 DF$visit_id[DF$visit_id == "3"] <- "V3"
 DF_FC <- DF
-### Load Structural dataset
 
-structural_path <- "/Volumes/LaCie/Sync/Graph_project/data/stats_diffusion_metric_in_fullWM_FBC.xlsx"
-DF_SC <- read_and_normalize_data(structural_path,"FBC")
-#### Define model parameters
+
+### Define model preference 
 
 weight <- "PearsonCorrel"
 weight_S <- "FBC"
 
-threshold <- 0.20
+threshold_a <- 0.1
+threshold_b <- 0.5
+
+set_threshold = seq(threshold_a,threshold_b,0.01)
 
 ### Run global analysis
-# 
-# G <- NetworkConhect::getData(DF, weight,"global_eff","density",threshold)
-# 
-# g <- ggviolin(G, x = "Group", y = "Y", fill = "Group",
-#               palette = "npg",#color_palette,
-#               alpha = .6,
-#               width = .5,
-#               linetype = 'blank',
-#               add= "jitter",color = "Group")
-# g
-# 
-# res.glmer <- lme4::lmer(Y ~ Group + (1|ids),data = G)
-# Anova(res.glmer)
+
+compute_Y_on_thresholds <- function(DF_FC,weight,metri,set_threshold){
+  
+  list_of_G <- list()
+  mean_Y <- c()
+  i <- 1
+  for (t in set_threshold){
+    print(paste0("Computing on threshold : ",t))
+    G <- NetworkConhect::getData(DF_FC, weight,"global_eff","density",t)
+    list_of_G[[i]] <- G
+    i <- i +1
+    mean_Y <- c(mean_Y,mean(G$Y))
+  }
+  # for (i in 1:length(set_threshold)){
+  # }
+  
+  multi_thresh_DF <- data.frame(thresholds = set_threshold, mean_y = mean_Y)
+
+
+  
+  result_list <- vector("list", nrow(list_of_G[[1]]))
+  
+  for (i in 1:nrow(list_of_G[[1]])) {
+    row_info <- vector("list", length(list_of_G))
+    for (j in 1:length(list_of_G)) {
+      subject_id <- list_of_G[[j]]$ids[i]
+      group <- list_of_G[[j]]$Group[i]
+      y_value <- list_of_G[[j]]$Y[i]
+      row_info[[j]] <- list(subject_id = subject_id, group = group, Y = y_value)
+    }
+    result_list[[i]] <- row_info
+  }
+  
+  df <- data.frame(ids = character(), Group = character(),Y = numeric())
+  df_only_values <- data.frame(X = set_threshold)
+  for(i in 1:length(result_list)){
+    Y_over_t <- c()
+    for (j in 1:length(result_list[[i]])){
+      Y_over_t <- c(Y_over_t,result_list[[i]][[j]]$Y)
+    }
+    
+    df_only_values <- cbind(df_only_values,Y_over_t)
+    
+    Y_AUC <- AUC(set_threshold,Y_over_t)
+    group <- result_list[[i]][[1]]$group
+    subject_id <- result_list[[i]][[1]]$subject_id
+      
+    df <- df %>% 
+      add_row(ids = subject_id, Group = group, Y = Y_AUC)
+    
+  }
+  library(tidyverse)
+  names(df_only_values)[2:ncol(df_only_values)] <- paste0("Y_over_t_", 1:(ncol(df_only_values)-1))
+  df_long <- df_only_values %>%
+    gather(key = "Y_variable", value = "Y_value", -X)
+  
+
+  
+  df_means <- df_only_values %>%
+    # Select the columns for each range and calculate the mean
+    mutate(mean_V1 = rowMeans(select(., Y_over_t_1:Y_over_t_32)),
+           mean_V2 = rowMeans(select(., Y_over_t_33:Y_over_t_63)),
+           mean_V3 = rowMeans(select(., Y_over_t_64:Y_over_t_89)))  %>%
+    # Select only the necessary columns
+    select(X, mean_V1, mean_V2, mean_V3)
+  
+  df_means_long <- df_means %>%
+    gather(key = "mean_variable", value = "mean_value", -X)
+  
+  # Plot the mean lines against X
+
+  
+  for (i in 1:length(list_of_G)){
+    res.glmer <- lme4::lmer(Y ~ Group + (1|ids),data = list_of_G[[i]])
+    print(Anova(res.glmer)$`Pr(>Chisq)`)
+  }
+  
+  list("listG" = list_of_G,"dfallgroups" = multi_thresh_DF,"dfauc" = df,"dfonly" = df_only_values,"dfallplots" = df_long,"dfgroupplot" = df_means_long)
+}
+
+R <- compute_Y_on_thresholds(DF_FC,"PearsonCorrel","global_eff",set_threshold)
+
+saveR <- function(output_dir,R,metric,atlas){
+  csv_path <- paste0(output_dir,"/",atlas,'/auc_table_',metric,'_',atlas,'.csv',sep = "")
+  write.csv(R$dfauc,csv_path)
+}
+
+
+plotR <- function(R,metric){
+  
+  scattermean <- ggscatter(R$dfallgroups, x = "thresholds", y = "mean_y", 
+            xlab = "Network sparsity", ylab = "global efficiency", # Axis labels
+            main = "Global efficiency in function of functional network sparsity", # Title
+            color = "deepskyblue3",     # Point color
+            size  = 3)  
+  
+  plotall <- ggplot(R$dfallplots, aes(x = X, y = Y_value, color = Y_variable, group = Y_variable)) +
+    geom_point() +
+    geom_line() +
+    labs(x = "Network sparsity", y = metric, color = "Variable") +
+    theme_minimal() + 
+    theme(legend.position = "none") 
+  
+  plotmean <- ggplot(R$dfgroupplot, aes(x = X, y = mean_value, color = mean_variable, group = mean_variable)) +
+    geom_line() +
+    geom_point() +
+    labs(x = "Network sparsity", y = paste("Mean",metric," by group"), color = "Mean Variable") +
+    theme_minimal()
+
+  g <- ggviolin(R$dfauc, x = "Group", y = "Y", fill = "Group",
+                palette = c("#F8766D","#03BA39","#089CFF"),#color_palette,
+                alpha = .4,
+                draw_quantiles = 0.5,
+                width = .5,
+                ylab = paste("AUC",metric),
+                add= "jitter",color = "Group")
+  res.lm  <- lme4::lmer(Y ~ Group + (1|ids),data = R$dfauc)
+  tabplot <- tableGrob(sjtable2df::mtab2df(sjPlot::tab_model(res.lm),1))
+  
+  grid.arrange(plotall, plotmean,g,tabplot,ncol=2)
+  
+}
+
+
 #res.lmer <- lme4::lmer(Y ~ Group + (1|ids),data = G)
 #print(tidy(res.glmer,"fixed"),caption = paste("Analyzing ",m, " ~ Group + (1|id)"))
 #print(tidy(res.lmer,"fixed"),caption = paste("Analyzing ",m, " ~ Group + (1|id)"))
-g_F <- makeGraphFunc(DF_FC,"12","V1",weight,0)
-g_S <- makeGraph(DF_SC,"1-E-101-MG","V1",weight_S,0)
-
-cortical_nodes <- V(g_S)$name[as.numeric((V(g_S))$name)>100]
-g_cort_S <- induced_subgraph(g_S,cortical_nodes)
-
-## Define a conversion look up table
-
-LUT <- getLUT("/Volumes/LaCie/Sync/code/FreeSurferColorLUT.txt")
-LUT <- LUT[LUT$No %in% cortical_nodes,]
-functional_nodes <- V(g_F)$name
-
-## Rename structural nodes after functional nodes
-LUT$functional_labels <- functional_nodes
-V(g_cort_S)
-V(g_cort_S)$name <- LUT$functional_labels[match(V(g_cort_S)$name, LUT$No)]
-
-
-MS <- as_adjacency_matrix(g_cort_S,type="both",attr = "weight",sparse = F)
-MF <- as_adjacency_matrix(g_F,type="both",attr = "weight",sparse = F)
-
-
-cor(MS[1,],MF[1,],method = "spearman",  use = "pairwise.complete.obs")
-
-
-
-
-vertex_list <- V(g)$name
-#vertex_list <- vertex_list[!grepl("medial wall", vertex_list) & !grepl("background", vertex_list)]
-
-gT <- sparseThresh(g,threshold)
-M <- as_adjacency_matrix(g,type="both",attr = "weight",sparse = F)
-heatmap.2(M,trace = "none",dendrogram = "none",key=T,col = viridis(100))
-
-MT <- as_adjacency_matrix(gT,type="both",attr = "weight",sparse = F)
-heatmap.2(MT,trace = "none",dendrogram = "none",key=T,col = viridis(100))
-
+# g_F <- makeGraphFunc(DF_FC,"12","V1",weight,0)
+# g_S <- makeGraph(DF_SC,"1-E-101-MG","V1",weight_S,0)
+# 
+# cortical_nodes <- V(g_S)$name[as.numeric((V(g_S))$name)>100]
+# g_cort_S <- induced_subgraph(g_S,cortical_nodes)
+# 
+# ## Define a conversion look up table
+# 
+# LUT <- getLUT("/Volumes/LaCie/Sync/code/FreeSurferColorLUT.txt")
+# LUT <- LUT[LUT$No %in% cortical_nodes,]
+# functional_nodes <- V(g_F)$name
+# 
+# ## Rename structural nodes after functional nodes
+# LUT$functional_labels <- functional_nodes
+# V(g_cort_S)
+# V(g_cort_S)$name <- LUT$functional_labels[match(V(g_cort_S)$name, LUT$No)]
+# 
+# 
+# MS <- as_adjacency_matrix(g_cort_S,type="both",attr = "weight",sparse = F)
+# MF <- as_adjacency_matrix(g_F,type="both",attr = "weight",sparse = F)
+# 
+# 
+# cor(MS[1,],MF[1,],method = "spearman",  use = "pairwise.complete.obs")
+# 
+# 
+# 
+# 
+# vertex_list <- V(g)$name
+# #vertex_list <- vertex_list[!grepl("medial wall", vertex_list) & !grepl("background", vertex_list)]
+# 
+# gT <- sparseThresh(g,threshold)
+# M <- as_adjacency_matrix(g,type="both",attr = "weight",sparse = F)
+# heatmap.2(M,trace = "none",dendrogram = "none",key=T,col = viridis(100))
+# 
+# MT <- as_adjacency_matrix(gT,type="both",attr = "weight",sparse = F)
+# heatmap.2(MT,trace = "none",dendrogram = "none",key=T,col = viridis(100))
+# 
 
 # ve <- unname(M[,390])
 # matrixa<- matrix(ve,ncol = 400)
@@ -115,8 +228,8 @@ heatmap.2(MT,trace = "none",dendrogram = "none",key=T,col = viridis(100))
 # 
 
 
-M <- as_adjacency_matrix(g,type="both",attr = "weight",sparse = F)
-heatmap.2(M,trace = "none",dendrogram = "none",key=T,col = viridis(100))
+# M <- as_adjacency_matrix(g,type="both",attr = "weight",sparse = F)
+# heatmap.2(M,trace = "none",dendrogram = "none",key=T,col = viridis(100))
 
 # ### Nodes fs
 # not_lateralized_LUT <- function(){
@@ -145,7 +258,7 @@ heatmap.2(M,trace = "none",dendrogram = "none",key=T,col = viridis(100))
 # I = intersect(nodes_nilearn$labelname,LUT$labelname)
 # S = setdiff(nodes_nilearn$labelname,LUT$labelname)
 
-M <- read.csv("Volumes/LaCie/derivatives/Patients/sub-01/ses-002/functional_connectivity/sub-01_ses-002_destrieux_correlation_mat.csv",header=F)
-M <- as.matrix(M,sparse=F)
-M[M<0]<- 0
+# M <- read.csv("Volumes/LaCie/derivatives/Patients/sub-01/ses-002/functional_connectivity/sub-01_ses-002_destrieux_correlation_mat.csv",header=F)
+# M <- as.matrix(M,sparse=F)
+# M[M<0]<- 0
 # gM <- graph_from_adjacency_matrix(M)
