@@ -1,0 +1,181 @@
+---
+title: "**Report statistics V1 versus V3 - functional correlation connectome**"
+author: "*François Ramon*"
+output:
+  html_document:
+    toc: true
+classoption: landscape
+geometry: margin = 1in
+font-size: 13pt
+
+
+papersize: a2
+date: "2024-01-24"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+\newpage
+
+```{r setup_wd, include=T}
+#source("/Users/francoisramon/Desktop/̀These/Graph_project/code/output_sentences.R")
+source("/Users/francoisramon/Desktop/These/CONHECT/fMRI_pipeline/code/clinical_correlation/correlate_to_clinic_fmri.R")
+wd <- '/Users/francoisramon/Desktop/These/CONHECT'
+data_dir <- "/Users/francoisramon/Desktop/These/CONHECT/fMRI_pipeline/results/"
+options( "digits"=4)
+library(ggplot2)
+library(ggpubr)
+library(ggsci)
+library(car)
+library(coin)
+library(gridExtra)
+library(ggsignif)
+```
+
+
+
+
+
+```{r fractional_anisotropy, echo = F,message = F,warning=F,results='asis',fig.height=3,fig.width=14,fig.align='center'}
+#fig.show = "hold", out.width="25%",out.height="50%",results='asis',message = F, warning = F}
+
+ metrics = c('global_eff','local_eff','characteristic_path','clust_coeff','smallworldeness')
+
+
+#weights <- c("rd") # c('FBC','FA','Fintra')
+options(scipen = 1, digits=4)
+atlas <- c("harvard_oxford","aal","schaefer")
+for (a in atlas){
+  cat('\n')
+  cat("# Networks weighted by ", a, "\n")
+  
+  for (m in metrics){
+    cat("## Analyzing metric ",m,"\n")
+    
+    path_to_stats_table <- paste(data_dir,a,"/auc_table_",m,"_",a,".csv",sep="")
+    print(path_to_stats_table)
+    D <- read.csv(path_to_stats_table)
+    
+    #print(head(D))
+    
+    
+    full_data <- get_full_dataframe(wd,m,a)
+    
+    session_list <- c('V1_vs_qual_rem','V1_vs_qual_rep','V1_vs_quant') 
+    for(group in session_list){
+    
+       ## remove NAs
+       full_data[full_data=="NA"]=NA
+       full_data <- full_data[!is.na(full_data$remission),]
+       
+       ## Ensure columns are at the right format
+
+       #full_data$IRM3_N_ECT <- as.numeric(full_data$IRM3_N_ECT)
+       full_data$remission <- as.factor(full_data$remission)
+       full_data$reponse <- as.factor(full_data$reponse)
+
+
+       if(group=="V1_vs_qual_rem"){
+         formula <- as.formula("I(Y_V1 *1e6) ~ remission + age + sex ")
+         formula_caption <- paste(m,a,' ~ remission + age + sex',sep="")
+       }else if (group=="V1_vs_quant"){
+         formula <- as.formula("I(Y_V1 * 1e6)  ~ perc_MADRS_13 + age + sex")
+         formula_caption <- paste(m,a,' ~ perc_MADRS_13 + age + sex',sep="")
+       } else if (group=="V1_vs_qual_rep"){
+         formula <- as.formula("I(Y_V1 * 1e6)  ~ reponse + age + sex")
+         formula_caption <- paste(m,a,' ~ reponse + age + sex',sep="")
+       }
+       
+       ## 1. Plot table summary & adapted sentences
+
+       res.aov <- lm(formula, data = full_data)
+       res_df <- as.data.frame(car::Anova(res.aov, type = 2))
+       
+       
+       ### 2. Plot Boxplot
+
+      
+       depVi <- "Y_V1"
+       
+        
+       if(group == "V1_vs_qual_rem"){
+         g <- ggviolin(full_data, x = "remission", y = depVi, fill = "remission",
+             palette = c("#03BA35","#089CFF"),
+             # palette = "npg",#color_palette,
+             draw_quantiles = 0.5,
+             alpha = .6,
+             width = .5,
+             #linetype = 'blank',
+             add= "jitter",color = "remission")
+       
+       }else if(group == "V1_vs_qual_rep") {
+         g <- ggviolin(full_data, x = "reponse", y = depVi, fill = "reponse",
+            palette = c("#03BA35","#089CFF"),#color_palette,
+            alpha = .4,
+            draw_quantiles = 0.5,
+            width = .5,
+            ylab  = paste(m," in ", a, " networks",sep = ""),
+            add= "jitter",color = "reponse")
+         
+        
+       } else if (group == "V1_vs_quant"){
+         g <- ggscatter(full_data, x = "perc_MADRS_13", y = depVi,
+          add = "reg.line",                                 # Add regression line
+          conf.int = TRUE,                                  # Add confidence interval
+          add.params = list(color = "blue",
+                            fill = "lightgray")
+          )
+         # g <- ggplot(full_data, aes(x = perc_MADRS_13, y = !! sym(depVi))) +
+         #  #theme_fr() +
+         #  geom_point() +                  # Scatterplot of the data
+         #  geom_smooth(method =lm) +
+         #  labs(title = paste(m,"~ MADRS percentage 1->3"),
+         #      x = "MADRS percentage between V1 and V3",
+         #      y = paste(m,' - ',depVi,sep=""))
+         #print(g)
+         
+       }
+     
+       #T <- knitr::kable(res_df,caption = formula_caption,attr = "style='width:30%;'")
+       
+       res_df <- rename(res_df,"SumSq" = "Sum Sq")
+       res_df$SumSq <- as.numeric(res_df$SumSq)
+       is.num <- sapply(res_df, is.numeric)
+       res_df[is.num] <- lapply(res_df[is.num], round, 4)
+
+       T <- tableGrob(res_df)
+       print(gridExtra::grid.arrange(g,T,ncol = 2)$gtable)
+
+       if(group=="V1_vs_qual_rem"){
+         formula <- as.formula("I(Y_V1 *1e6) ~ remission ")
+         res.aov <- coin::wilcox_test(formula, data = full_data)
+         print(res.aov)
+       } else if (group == "V1_vs_quant") {
+         formula <- as.formula("I(Y_V1 *1e6) ~ perc_MADRS_13")
+         # res.aov <- wilcox.test(full_data$Y_V1,full_data$perc_MADRS_13)
+         # print(res.aov)
+       } else if (group == "V1_vs_qual_rep"){
+         formula <- as.formula("I(Y_V1 *1e6) ~ reponse ")
+         res.aov <- coin::wilcox_test(formula, data = full_data)
+         print(res.aov)
+       }
+       
+       ## 3.  Plot table summary & adapted sentences
+    
+     
+     cat('\n')
+     cat('\\newpage\n')
+     cat('\n')
+    
+    }
+    
+  }
+
+}
+```
+
+
+
+

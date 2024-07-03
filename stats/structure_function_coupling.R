@@ -18,7 +18,7 @@ library(broom.mixed)
 #### Load functional dataset
 
 path <- "/Volumes/LaCie/derivatives/grouped_results"
-data_path = "/Volumes/LaCie/derivatives/grouped_results/FC_destrieux.csv"
+data_path = "/Volumes/LaCie/derivatives/grouped_results/FC_schaefer.csv"
 DF <- read.csv(data_path)
 colnames(DF) <- c('subject_id','visit_id','from_i','to_j','weight',"from","to")
 DF <- DF[c("subject_id","visit_id","from","to","weight")]
@@ -33,16 +33,15 @@ DF_FC <- DF
 ### Load Structural dataset
 
 structural_path <- "/Volumes/LaCie/Sync/Graph_project/data/stats_diffusion_metric_in_fullWM_FBC.xlsx"
-DF_SC <- read_and_normalize_data(structural_path,"FBC")
+DF_SC <- read_and_normalize_data(structural_path,"SC")
 #### Define model parameters
 
 weight <- "PearsonCorrel"
-weight_S <- "FBC"
+weight_S <- "SC"
 
 threshold <- 0.20
 
 ### Run global analysis
-
 
 equivalence_names <- read.csv("/Volumes/LaCie/equivalence_table_Patients.csv")
 # equivalence_names$functional_label <- as.character(seq(1,44,1))
@@ -52,7 +51,7 @@ subject_list <- get_subject_ids(DF_FC,"V1")
 subject_list <- subject_list[!grepl("12",subject_list) & !grepl("11",subject_list) ]
 LUT <- getLUT("/Volumes/LaCie/Sync/code/FreeSurferColorLUT.txt")
 spearman_matrix <- LUT$functional_labels
-mean_r <- c()
+mean_r <- c()x
 
 for(sub in subject_list){
   

@@ -12,6 +12,8 @@ library(ggpubr)
 library(lme4)
 library(broom.mixed)
 library(gridExtra)
+library(tidyverse)
+library(DescTools)
 ######### 
 
 ### Utils functions  ####
@@ -26,7 +28,7 @@ readLUT <- function(lut_path){
 #### Load functional dataset
 
 path <- "/Volumes/LaCie/derivatives/grouped_results"
-data_path = "/Volumes/LaCie/derivatives/grouped_results/FC_aal.csv"
+data_path = "/Volumes/LaCie/derivatives/grouped_results/FC_schaefer.csv"
 output_dir = "/Users/francoisramon/Desktop/These/fMRI_pipeline/results"
 DF <- read.csv(data_path)
 colnames(DF) <- c('subject_id','visit_id','from_i','to_j','weight',"from","to")
@@ -40,27 +42,26 @@ DF$visit_id[DF$visit_id == "2"] <- "V2"
 DF$visit_id[DF$visit_id == "3"] <- "V3"
 DF_FC <- DF
 
-
 ### Define model preference 
 
 weight <- "PearsonCorrel"
 weight_S <- "FBC"
 
 threshold_a <- 0.1
-threshold_b <- 0.5
+threshold_b <- 0.4
 
 set_threshold = seq(threshold_a,threshold_b,0.01)
-
+metric_lists <- c("global_eff","local_eff","clust_coeff","characteristic_path","smallworldeness")
 ### Run global analysis
 
-compute_Y_on_thresholds <- function(DF_FC,weight,metri,set_threshold){
+compute_Y_on_thresholds <- function(DF_FC,weight,m,set_threshold){
   
   list_of_G <- list()
   mean_Y <- c()
   i <- 1
   for (t in set_threshold){
     print(paste0("Computing on threshold : ",t))
-    G <- NetworkConhect::getData(DF_FC, weight,"global_eff","density",t)
+    G <- NetworkConhect::getData(DF_FC, weight,m,"density",t)
     list_of_G[[i]] <- G
     i <- i +1
     mean_Y <- c(mean_Y,mean(G$Y))
@@ -103,7 +104,7 @@ compute_Y_on_thresholds <- function(DF_FC,weight,metri,set_threshold){
       add_row(ids = subject_id, Group = group, Y = Y_AUC)
     
   }
-  library(tidyverse)
+
   names(df_only_values)[2:ncol(df_only_values)] <- paste0("Y_over_t_", 1:(ncol(df_only_values)-1))
   df_long <- df_only_values %>%
     gather(key = "Y_variable", value = "Y_value", -X)
@@ -132,13 +133,27 @@ compute_Y_on_thresholds <- function(DF_FC,weight,metri,set_threshold){
   list("listG" = list_of_G,"dfallgroups" = multi_thresh_DF,"dfauc" = df,"dfonly" = df_only_values,"dfallplots" = df_long,"dfgroupplot" = df_means_long)
 }
 
-R <- compute_Y_on_thresholds(DF_FC,"PearsonCorrel","global_eff",set_threshold)
-
 saveR <- function(output_dir,R,metric,atlas){
+  
+  equivalence_names <- read.csv("/Volumes/LaCie/equivalence_table_Patients.csv")
+  colnames(equivalence_names) <- c( "X", "subject_id", "sub_number", "functional_label")
+  sex <- read_excel("/Users/francoisramon/Desktop/These/Graph_project/data/Genres_conhect.xlsx")
+  age <- read_excel("/Users/francoisramon/Desktop/These/Graph_project/data/ages_conhect.xlsx")
+  
+  equivalence_table <- merge(equivalence_names,sex, by = "subject_id")
+  equivalence_table <- merge(equivalence_table,age, by = "subject_id")
+  
+  df_auc <- R$dfauc
+  colnames(df_auc) <- c("functional_label","Group","Y")
+  
+  df_auc <- merge(df_auc,equivalence_table, by ="functional_label")
+  res.lmer <- lme4::lmer(Y ~ Group + age + sex + (1|functional_label),data = df_auc)
+  Anova(res.lmer)
+  
+  
   csv_path <- paste0(output_dir,"/",atlas,'/auc_table_',metric,'_',atlas,'.csv',sep = "")
-  write.csv(R$dfauc,csv_path)
+  write.csv(df_auc,csv_path)
 }
-
 
 plotR <- function(R,metric){
   
@@ -175,8 +190,21 @@ plotR <- function(R,metric){
   
 }
 
+computeR = TRUE
+if (computeR == TRUE){
+  for (m in metric_lists){
+    R <- compute_Y_on_thresholds(DF_FC,"PearsonCorrel",m,set_threshold)
+    saveR(output_dir = output_dir,R,m,"schaefer")
+    plotR(R,m)
+  }
+}
 
-#res.lmer <- lme4::lmer(Y ~ Group + (1|ids),data = G)
+#dfauc <- read.csv("/Users/francoisramon/Desktop/These/fMRI_pipeline/results/aal/auc_table_smallworldeness_aal.csv")
+#res.lm  <- lme4::lmer(Y ~ Group + age + sex + (1|functional_label),data = dfauc)
+
+
+
+
 #print(tidy(res.glmer,"fixed"),caption = paste("Analyzing ",m, " ~ Group + (1|id)"))
 #print(tidy(res.lmer,"fixed"),caption = paste("Analyzing ",m, " ~ Group + (1|id)"))
 # g_F <- makeGraphFunc(DF_FC,"12","V1",weight,0)
